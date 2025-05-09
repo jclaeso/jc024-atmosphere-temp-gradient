@@ -34,3 +34,6 @@ h_limit: rays above this height are not considered, 30 m
 
 - add a graph that shows the difference in landing height between adjecent beams. The graph should include a line that represents the average difference in landing height between adjacent beams
 
+---
+
+add dashed thin lines that shows the beam trajectories for the case that the air is at a constant temperature of 20 degrees Celsius. The lines should be in a the same color as the beams, but with a lower opacity and dashed.
