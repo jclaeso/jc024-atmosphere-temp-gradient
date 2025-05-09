@@ -24,3 +24,13 @@ h_limit: rays above this height are not considered, 30 m
 
 
 -------
+
+
+- add a variable called h_start that represents the height of the laser beams at the start of the propagation. The default value is 2 m, but it can be modified to simulate different initial heights.
+
+- terminate beams that reach the ground or the wall.
+
+- add a graph that shows the air temperature as a function of height. The graph should include the temperature at sea level and the temperature at the height of the laser beams. The graph should also include a line that represents the temperature gradient, which can be modified to simulate different atmospheric conditions.
+
+- add a graph that shows the difference in landing height between adjecent beams. The graph should include a line that represents the average difference in landing height between adjacent beams
+
