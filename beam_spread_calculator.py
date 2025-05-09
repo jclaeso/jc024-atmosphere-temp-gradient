@@ -174,7 +174,7 @@ def create_combined_plot(
         ax2.grid(True, alpha=0.7)
         ax2.legend()
     
-    # Figure 3: Temperature Profile
+    # Figure 3: Temperature Profile - MODIFIED to swap axes (temp on x-axis, height on y-axis)
     heights = np.linspace(0, h_plot_max_sim, 100)
     temp_args = {
         "temp_at_ground_C": temp_at_ground_C_sim,
@@ -186,10 +186,11 @@ def create_combined_plot(
     temperatures_K = [temp_air_profile(h, **temp_args) for h in heights]
     temperatures_C = [T - 273.15 for T in temperatures_K]
     
-    ax3.plot(heights, temperatures_C, 'b-', label='Temperature (°C)')
-    ax3.axvline(x=0, color='k', linestyle='-', alpha=0.3)
-    ax3.set_xlabel('Height (m)')
-    ax3.set_ylabel('Temperature (°C)')
+    # Plot with temperature on x-axis, height on y-axis
+    ax3.plot(temperatures_C, heights, 'b-', label='Temperature (°C)')
+    ax3.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+    ax3.set_ylabel('Height (m)')
+    ax3.set_xlabel('Temperature (°C)')
     
     title_parts = ['3: Temperature Profile', f'Ground Temp: {temp_at_ground_C_sim}°C']
     if gradient_type_sim == "linear_lapse":
@@ -198,19 +199,19 @@ def create_combined_plot(
         title_parts.append(f'Non-linear: ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m')
     ax3.set_title('\n'.join(title_parts))
     
-    # Add Kelvin scale on right y-axis
-    ax3_twin = ax3.twinx()
-    ax3_twin.plot(heights, temperatures_K, 'r-', label='Temperature (K)')
-    ax3_twin.set_ylabel('Temperature (K)')
+    # Add Kelvin scale on top x-axis
+    ax3_twin = ax3.twiny()
+    ax3_twin.plot(temperatures_K, heights, 'r-', label='Temperature (K)')
+    ax3_twin.set_xlabel('Temperature (K)')
     
     # Mark ground and start height temperatures
     temp_at_sea_level_C = temp_air_profile(0, **temp_args) - 273.15
     temp_at_h_start_C = temp_air_profile(h_start_sim, **temp_args) - 273.15
-    ax3.plot(0, temp_at_sea_level_C, 'go', markersize=6, label=f'Sea Level: {temp_at_sea_level_C:.2f}°C')
+    ax3.plot(temp_at_sea_level_C, 0, 'go', markersize=6, label=f'Sea Level: {temp_at_sea_level_C:.2f}°C')
     if 0 <= h_start_sim <= h_plot_max_sim:
-        ax3.plot(h_start_sim, temp_at_h_start_C, 'ro', markersize=6, 
+        ax3.plot(temp_at_h_start_C, h_start_sim, 'ro', markersize=6, 
                  label=f'Laser Start: {temp_at_h_start_C:.2f}°C')
-        ax3.axvline(x=h_start_sim, color='r', linestyle=':', alpha=0.5)
+        ax3.axhline(y=h_start_sim, color='r', linestyle=':', alpha=0.5)
     
     # Combine legends
     lines1, labels1 = ax3.get_legend_handles_labels()
@@ -219,7 +220,7 @@ def create_combined_plot(
     
     ax3.grid(True)
     
-    # Figure 4: Beam Landing Separations
+    # Figure 4: Beam Landing Separations - MODIFIED to add major/minor grid lines
     if final_y_positions and len(final_y_positions) >= 2:
         separations = []
         pair_labels = []
@@ -246,12 +247,28 @@ def create_combined_plot(
                 ax4.set_xticklabels(pair_labels, rotation=45, ha="right", fontsize=9)
             
             ax4.legend(loc='best', fontsize='small')
-            ax4.grid(True, axis='y', alpha=0.7)
             
+            # Add major grid at 1mm intervals and minor grid at 0.2mm intervals
             if separations:
                 max_sep = max(separations)
                 min_sep = min(separations)
-                ax4.set_ylim(min_sep*0.99, max_sep*1.01)
+                
+                # Set y-limits with some padding
+                y_min = np.floor(min_sep - 0.5)
+                y_max = np.ceil(max_sep + 0.5)
+                ax4.set_ylim(y_min, y_max)
+                
+                # Set major ticks every 1mm
+                major_ticks = np.arange(np.floor(y_min), np.ceil(y_max) + 1, 1)
+                ax4.set_yticks(major_ticks)
+                
+                # Add minor ticks every 0.2mm
+                minor_ticks = np.arange(np.floor(y_min), np.ceil(y_max) + 0.2, 0.2)
+                ax4.set_yticks(minor_ticks, minor=True)
+                
+                # Configure grid
+                ax4.grid(True, which='major', axis='y', linestyle='-', linewidth=0.8, alpha=0.7)
+                ax4.grid(True, which='minor', axis='y', linestyle=':', linewidth=0.4, alpha=0.4)
                 
                 # Add labels to each bar
                 for i, sep in enumerate(separations):
@@ -388,12 +405,12 @@ if __name__ == '__main__':
         h_start_sim=1.5,
         temp_at_ground_C_sim=25.0,
         gradient_type_sim="non_linear_ground_effect",
-        non_linear_delta_T_C_sim = -10.0,
+        non_linear_delta_T_C_sim = -5.0,
         non_linear_decay_k_sim = 0.8,
         n_beams_sim=7,
-        d_angle_mrad_sim=0.05,
+        d_angle_mrad_sim=0.5,
         dist_wall_sim=800,
         h_limit_min_sim=0.0,
         h_limit_max_sim=40.0,
-        h_plot_max_sim=15.0
+        h_plot_max_sim=10.0
     )
