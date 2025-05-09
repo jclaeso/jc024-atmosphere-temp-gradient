@@ -160,7 +160,6 @@ def plot_figure3_temperature_vs_height(h_start_laser, temp_at_ground_C, gradient
 
 
 def plot_figure4_beam_landing_separation(final_y_positions, initial_angles_mrad, figure_num="4"):
-    # (Implementation from previous response, should be fine)
     if not final_y_positions or len(final_y_positions) < 2:
         print(f"Figure {figure_num}: Not enough beam landing positions to calculate separations.")
         return
@@ -181,6 +180,17 @@ def plot_figure4_beam_landing_separation(final_y_positions, initial_angles_mrad,
     plt.title(f'Figure {figure_num}: Difference in Landing Height Between Adjacent Beams')
     if pair_labels: plt.xticks(x_indices, pair_labels, rotation=45, ha="right", fontsize=9)
     plt.legend(); plt.grid(True, axis='y', alpha=0.7); plt.tight_layout()
+    # Adjust y-axis limits to center around the average value and show the full range of bars
+    if separations:
+        max_sep = max(separations)
+        min_sep = min(separations)
+        plt.ylim(min_sep*0.99, max_sep*1.01)
+        # Add tick marks for each 0.001
+        plt.yticks(np.arange(min_sep, max_sep + 0.001, 0.001))
+
+    # Add labels to each bar showing the landing height separation
+    for i, sep in enumerate(separations):
+        plt.text(x_indices[i], sep, f"{sep:.4f}", ha='center', va='bottom', fontsize=9)
 
 
 # --- Main Simulation ---
