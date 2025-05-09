@@ -7,3 +7,5 @@
 * lägg in nominella strålar
 * felsignal = nominell stråle vs riktg position
 * mätsignal = upppmätt delning jämför med nominell delning
+
+* gör exempel på konstant temeperatur, och linjär temperaturgradient
