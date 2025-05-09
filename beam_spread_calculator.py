@@ -165,7 +165,8 @@ def plot_figure4_beam_landing_separation(final_y_positions, initial_angles_mrad,
         return
     separations = []; pair_labels = []
     for i in range(len(final_y_positions) - 1):
-        sep = final_y_positions[i+1] - final_y_positions[i]; separations.append(sep)
+        sep = (final_y_positions[i+1] - final_y_positions[i]) * 1000  # Convert to mm
+        separations.append(sep)
         label = f"B{i+1}-B{i+2}"
         if initial_angles_mrad is not None and len(initial_angles_mrad) == len(final_y_positions):
              label += f"\n({initial_angles_mrad[i]:.2f} to {initial_angles_mrad[i+1]:.2f} mrad)"
@@ -174,9 +175,9 @@ def plot_figure4_beam_landing_separation(final_y_positions, initial_angles_mrad,
     avg_separation = np.mean(separations)
     plt.figure(figsize=(max(10, len(separations)*0.8), 7))
     x_indices = np.arange(len(separations))
-    plt.bar(x_indices, separations, color='coral', label='Separation (m)')
-    plt.axhline(avg_separation, color='dodgerblue', linestyle='--', linewidth=2, label=f'Avg Sep: {avg_separation:.4f} m')
-    plt.xlabel('Adjacent Beam Pair'); plt.ylabel('Landing Height Separation (m)')
+    plt.bar(x_indices, separations, color='coral', label='Separation (mm)')
+    plt.axhline(avg_separation, color='dodgerblue', linestyle='--', linewidth=2, label=f'Avg Sep: {avg_separation:.4f} mm')
+    plt.xlabel('Adjacent Beam Pair'); plt.ylabel('Landing Height Separation (mm)')
     plt.title(f'Figure {figure_num}: Difference in Landing Height Between Adjacent Beams')
     if pair_labels: plt.xticks(x_indices, pair_labels, rotation=45, ha="right", fontsize=9)
     plt.legend(); plt.grid(True, axis='y', alpha=0.7); plt.tight_layout()
@@ -185,12 +186,12 @@ def plot_figure4_beam_landing_separation(final_y_positions, initial_angles_mrad,
         max_sep = max(separations)
         min_sep = min(separations)
         plt.ylim(min_sep*0.99, max_sep*1.01)
-        # Add tick marks for each 0.001
-        plt.yticks(np.arange(min_sep, max_sep + 0.001, 0.001))
+        # Add tick marks for each 1 mm
+        plt.yticks(np.arange(min_sep, max_sep + 1, 1))
 
     # Add labels to each bar showing the landing height separation
     for i, sep in enumerate(separations):
-        plt.text(x_indices[i], sep, f"{sep:.4f}", ha='center', va='bottom', fontsize=9)
+        plt.text(x_indices[i], sep, f"{sep:.1f}", ha='center', va='bottom', fontsize=9)
 
 
 # --- Main Simulation ---
@@ -324,7 +325,9 @@ def run_simulation(
         # Respect h_plot_max_sim for Figure 1's YLIMS if it's smaller than physical limits and data.
         # This is tricky for ray path plot - usually want to see all data. Let's prioritize data + h_limit_max_sim.
         # h_plot_max_sim is primarily for Figure 3.
-        plt.ylim(max(h_limit_min_sim-2, plot_min_y), min(h_limit_max_sim+5, plot_max_y)) # Increased upper padding potential
+        # plt.ylim(max(h_limit_min_sim-2, plot_min_y), min(h_limit_max_sim+5, plot_max_y)) # Increased upper padding potential
+        plot_max_y = max(final_y_positions) + 0.5 if final_y_positions else plot_max_y
+        plt.ylim(0, plot_max_y) # Increased upper padding potential
     plt.xlim(0, dist_wall_sim + dist_wall_sim * 0.05)
 
 
