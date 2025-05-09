@@ -174,7 +174,7 @@ def create_combined_plot(
         ax2.grid(True, alpha=0.7)
         ax2.legend()
     
-    # Figure 3: Temperature Profile - MODIFIED to swap axes (temp on x-axis, height on y-axis)
+    # Figure 3: Temperature Profile - Fix Kelvin scale and rename labels
     heights = np.linspace(0, h_plot_max_sim, 100)
     temp_args = {
         "temp_at_ground_C": temp_at_ground_C_sim,
@@ -199,28 +199,31 @@ def create_combined_plot(
         title_parts.append(f'Non-linear: ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m')
     ax3.set_title('\n'.join(title_parts))
     
-    # Add Kelvin scale on top x-axis
+    # Add Kelvin scale on top x-axis - Fix Kelvin scale display
     ax3_twin = ax3.twiny()
-    ax3_twin.plot(temperatures_K, heights, 'r-', label='Temperature (K)')
+    # Calculate proper Kelvin values from Celsius values
+    kelvin_ticks = ax3.get_xticks()
+    kelvin_values = kelvin_ticks + 273.15
+    ax3_twin.set_xticks(kelvin_ticks)
+    ax3_twin.set_xticklabels([f"{k:.1f}" for k in kelvin_values])
     ax3_twin.set_xlabel('Temperature (K)')
     
-    # Mark ground and start height temperatures
-    temp_at_sea_level_C = temp_air_profile(0, **temp_args) - 273.15
+    # Mark ground and instrument height temperatures - Rename labels
+    temp_at_ground_C = temp_air_profile(0, **temp_args) - 273.15
     temp_at_h_start_C = temp_air_profile(h_start_sim, **temp_args) - 273.15
-    ax3.plot(temp_at_sea_level_C, 0, 'go', markersize=6, label=f'Sea Level: {temp_at_sea_level_C:.2f}°C')
+    ax3.plot(temp_at_ground_C, 0, 'go', markersize=6, label=f'Ground Level: {temp_at_ground_C:.2f}°C')
     if 0 <= h_start_sim <= h_plot_max_sim:
         ax3.plot(temp_at_h_start_C, h_start_sim, 'ro', markersize=6, 
-                 label=f'Laser Start: {temp_at_h_start_C:.2f}°C')
+                 label=f'Instrument Height: {temp_at_h_start_C:.2f}°C')
         ax3.axhline(y=h_start_sim, color='r', linestyle=':', alpha=0.5)
     
     # Combine legends
     lines1, labels1 = ax3.get_legend_handles_labels()
-    lines2, labels2 = ax3_twin.get_legend_handles_labels()
-    ax3.legend(lines1 + lines2, labels1 + labels2, loc='best', fontsize='small')
+    ax3.legend(lines1, labels1, loc='best', fontsize='small')
     
     ax3.grid(True)
     
-    # Figure 4: Beam Landing Separations - MODIFIED to add major/minor grid lines
+    # Figure 4: Beam Landing Separations - Add relative differences to bar labels
     if final_y_positions and len(final_y_positions) >= 2:
         separations = []
         pair_labels = []
@@ -233,6 +236,12 @@ def create_combined_plot(
             pair_labels.append(label)
         
         if separations:
+            # Calculate differences between adjacent separations
+            sep_diffs = [0]  # First bar has no previous bar to compare with
+            for i in range(1, len(separations)):
+                diff = separations[i] - separations[i-1]
+                sep_diffs.append(diff)
+            
             avg_separation = np.mean(separations)
             x_indices = np.arange(len(separations))
             ax4.bar(x_indices, separations, color='coral', label='Separation (mm)')
@@ -270,9 +279,14 @@ def create_combined_plot(
                 ax4.grid(True, which='major', axis='y', linestyle='-', linewidth=0.8, alpha=0.7)
                 ax4.grid(True, which='minor', axis='y', linestyle=':', linewidth=0.4, alpha=0.4)
                 
-                # Add labels to each bar
-                for i, sep in enumerate(separations):
-                    ax4.text(x_indices[i], sep, f"{sep:.1f}", ha='center', va='bottom', fontsize=8)
+                # Add labels to each bar with separation value and difference from previous bar
+                for i, (sep, diff) in enumerate(zip(separations, sep_diffs)):
+                    if i == 0:
+                        label_text = f"{sep:.1f}"  # First bar has no difference
+                    else:
+                        sign = "+" if diff >= 0 else ""
+                        label_text = f"{sep:.1f} ({sign}{diff:.1f})"
+                    ax4.text(x_indices[i], sep, label_text, ha='center', va='bottom', fontsize=8)
     
     plt.tight_layout()
     fig.suptitle(f"Atmospheric Effect on Laser Beam ({gradient_type_sim})", fontsize=16, y=0.995)
