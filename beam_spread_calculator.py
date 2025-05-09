@@ -13,6 +13,7 @@ DEFAULT_LAPSE_RATE = 0.0065 # K/m (positive for temperature DECREASE with height
 dist_wall_default = 500.0
 n_beams_default = 10
 d_angle_mrad_default = 0.1
+offset_angle_mrad_default = 10.0  # Offset for beam angles in mrad
 w_laser_nm_default = 660.0
 d_step_ds_default = 0.1
 h_limit_max_default = 30.0  # Physical limit for ray propagation
@@ -109,21 +110,21 @@ def create_combined_plot(
     """
     Creates a single figure with 4 subplots:
     1. Beam propagation paths
-    2. Landing height vs initial angle
-    3. Temperature profile
+    2. Temperature profile (swapped with Landing Height plot)
+    3. Landing height vs initial angle (swapped with Temperature plot)
     4. Beam landing separations
     """
     fig = plt.figure(figsize=(16, 12))
     
-    # Create a 2x2 grid of subplots
+    # Create a 2x2 grid of subplots - SWAP positions of subplots 2 and 3
     ax1 = plt.subplot(2, 2, 1)  # Top left: Ray Paths
-    ax2 = plt.subplot(2, 2, 2)  # Top right: Landing Height vs Initial Angle
-    ax3 = plt.subplot(2, 2, 3)  # Bottom left: Temperature Profile
+    ax3 = plt.subplot(2, 2, 2)  # Top right: Temperature Profile (was Landing Height)
+    ax2 = plt.subplot(2, 2, 3)  # Bottom left: Landing Height vs Initial Angle (was Temperature)
     ax4 = plt.subplot(2, 2, 4)  # Bottom right: Beam Landing Separations
     
     # Figure 1: Ray Paths
     for i, (px, py) in enumerate(all_ray_paths):
-        ax1.plot(px, py, label=f'B{i+1} ({initial_angles_mrad[i]:.2f} mrad)')
+        ax1.plot(px, py, label=f'Beam {i+1}')
     ax1.axvline(x=dist_wall_sim, c='k', ls='--', label=f'Wall {dist_wall_sim}m')
     ax1.axhline(y=h_limit_max_sim, c='r', ls=':', label=f'Max H {h_limit_max_sim}m')
     ax1.axhline(y=h_limit_min_sim, c='g', ls=':', label=f'Ground {h_limit_min_sim}m')
@@ -148,33 +149,18 @@ def create_combined_plot(
     ax1.legend(fontsize='small', loc='best')
     ax1.grid(True, alpha=0.7)
     
-    # Set axis limits
+    # Set axis limits for subplot 1 and store plot_max_y for later use
     all_y_v = [y for _,p_y in all_ray_paths for y in p_y if p_y]
+    plot_max_y = 0
     if all_y_v:
         plot_max_y = max(final_y_positions) + 0.5 if final_y_positions else max(all_y_v) + 1
         ax1.set_ylim(0, plot_max_y)
+    else:
+        # If there's no beam data, use h_limit_max_sim as fallback
+        plot_max_y = h_limit_max_sim
     ax1.set_xlim(0, dist_wall_sim + dist_wall_sim * 0.05)
     
-    # Figure 2: Landing Height vs. Initial Angle
-    valid_fy = []
-    valid_ia = []
-    for i, y_fp in enumerate(final_y_positions):
-        lx = all_ray_paths[i][0][-1] if all_ray_paths[i][0] else 0
-        is_early_max = (abs(y_fp-h_limit_max_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim)
-        is_early_min = (abs(y_fp-h_limit_min_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim)
-        if lx >= dist_wall_sim - d_step_ds_sim and not is_early_max and not is_early_min:
-            valid_fy.append(y_fp)
-            valid_ia.append(initial_angles_mrad[i])
-    
-    if valid_fy:
-        ax2.plot(valid_ia, valid_fy, 'bo-', label="Impact on Wall")
-        ax2.set_xlabel("Initial Angle (mrad)")
-        ax2.set_ylabel(f"Final Height at Wall ({dist_wall_sim}m)")
-        ax2.set_title("2: Beam Landing Height vs. Initial Angle")
-        ax2.grid(True, alpha=0.7)
-        ax2.legend()
-    
-    # Figure 3: Temperature Profile - Fix Kelvin scale and rename labels
+    # Figure 3: Temperature Profile (NOW IN POSITION 2) - Remove Kelvin scale
     heights = np.linspace(0, h_plot_max_sim, 100)
     temp_args = {
         "temp_at_ground_C": temp_at_ground_C_sim,
@@ -199,16 +185,7 @@ def create_combined_plot(
         title_parts.append(f'Non-linear: ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m')
     ax3.set_title('\n'.join(title_parts))
     
-    # Add Kelvin scale on top x-axis - Fix Kelvin scale display
-    ax3_twin = ax3.twiny()
-    # Calculate proper Kelvin values from Celsius values
-    kelvin_ticks = ax3.get_xticks()
-    kelvin_values = kelvin_ticks + 273.15
-    ax3_twin.set_xticks(kelvin_ticks)
-    ax3_twin.set_xticklabels([f"{k:.1f}" for k in kelvin_values])
-    ax3_twin.set_xlabel('Temperature (K)')
-    
-    # Mark ground and instrument height temperatures - Rename labels
+    # Mark ground and instrument height temperatures
     temp_at_ground_C = temp_air_profile(0, **temp_args) - 273.15
     temp_at_h_start_C = temp_air_profile(h_start_sim, **temp_args) - 273.15
     ax3.plot(temp_at_ground_C, 0, 'go', markersize=6, label=f'Ground Level: {temp_at_ground_C:.2f}°C')
@@ -217,13 +194,33 @@ def create_combined_plot(
                  label=f'Instrument Height: {temp_at_h_start_C:.2f}°C')
         ax3.axhline(y=h_start_sim, color='r', linestyle=':', alpha=0.5)
     
-    # Combine legends
-    lines1, labels1 = ax3.get_legend_handles_labels()
-    ax3.legend(lines1, labels1, loc='best', fontsize='small')
-    
+    ax3.legend(loc='best', fontsize='small')
     ax3.grid(True)
     
-    # Figure 4: Beam Landing Separations - Add relative differences to bar labels
+    # After plotting the temperature profile, set the y-axis limits to match subplot 1
+    ax3.set_ylim(0, plot_max_y)
+    
+    # Figure 2: Landing Height vs. Initial Angle (NOW IN POSITION 3)
+    valid_fy = []
+    valid_ia = []
+    for i, y_fp in enumerate(final_y_positions):
+        lx = all_ray_paths[i][0][-1] if all_ray_paths[i][0] else 0
+        is_early_max = (abs(y_fp-h_limit_max_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim)
+        is_early_min = (abs(y_fp-h_limit_min_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim)
+        if lx >= dist_wall_sim - d_step_ds_sim and not is_early_max and not is_early_min:
+            valid_fy.append(y_fp)
+            valid_ia.append(initial_angles_mrad[i])
+    
+    if valid_fy:
+        ax2.plot(valid_ia, valid_fy, 'bo-', label="Impact on Wall")
+        ax2.set_xlabel("Initial Angle (mrad)")
+        ax2.set_ylabel(f"Final Height at Wall ({dist_wall_sim}m)")
+        ax2.set_title("2: Beam Landing Height vs. Initial Angle")
+        ax2.grid(True, alpha=0.7)
+        ax2.legend()
+        ax2.set_ylim(0, plot_max_y)  # Match the y-axis limit with subplot 1
+    
+    # Figure 4: Beam Landing Separations - Update bar labels to show offset from average
     if final_y_positions and len(final_y_positions) >= 2:
         separations = []
         pair_labels = []
@@ -231,18 +228,17 @@ def create_combined_plot(
             sep = (final_y_positions[i+1] - final_y_positions[i]) * 1000  # Convert to mm
             separations.append(sep)
             label = f"B{i+1}-B{i+2}"
-            if initial_angles_mrad is not None and len(initial_angles_mrad) == len(final_y_positions):
-                label += f"\n({initial_angles_mrad[i]:.2f} to {initial_angles_mrad[i+1]:.2f} mrad)"
             pair_labels.append(label)
         
         if separations:
-            # Calculate differences between adjacent separations
             sep_diffs = [0]  # First bar has no previous bar to compare with
             for i in range(1, len(separations)):
                 diff = separations[i] - separations[i-1]
                 sep_diffs.append(diff)
             
             avg_separation = np.mean(separations)
+            offsets_from_avg = [sep - avg_separation for sep in separations]
+            
             x_indices = np.arange(len(separations))
             ax4.bar(x_indices, separations, color='coral', label='Separation (mm)')
             ax4.axhline(avg_separation, color='dodgerblue', linestyle='--', linewidth=2, 
@@ -257,40 +253,34 @@ def create_combined_plot(
             
             ax4.legend(loc='best', fontsize='small')
             
-            # Add major grid at 1mm intervals and minor grid at 0.2mm intervals
             if separations:
                 max_sep = max(separations)
                 min_sep = min(separations)
                 
-                # Set y-limits with some padding
                 y_min = np.floor(min_sep - 0.5)
                 y_max = np.ceil(max_sep + 0.5)
                 ax4.set_ylim(y_min, y_max)
                 
-                # Set major ticks every 1mm
                 major_ticks = np.arange(np.floor(y_min), np.ceil(y_max) + 1, 1)
                 ax4.set_yticks(major_ticks)
                 
-                # Add minor ticks every 0.2mm
                 minor_ticks = np.arange(np.floor(y_min), np.ceil(y_max) + 0.2, 0.2)
                 ax4.set_yticks(minor_ticks, minor=True)
                 
-                # Configure grid
                 ax4.grid(True, which='major', axis='y', linestyle='-', linewidth=0.8, alpha=0.7)
                 ax4.grid(True, which='minor', axis='y', linestyle=':', linewidth=0.4, alpha=0.4)
                 
-                # Add labels to each bar with separation value and difference from previous bar
-                for i, (sep, diff) in enumerate(zip(separations, sep_diffs)):
+                for i, (sep, diff, offset) in enumerate(zip(separations, sep_diffs, offsets_from_avg)):
                     if i == 0:
-                        label_text = f"{sep:.1f}"  # First bar has no difference
+                        label_text = f"{offset:.1f}"
                     else:
-                        sign = "+" if diff >= 0 else ""
-                        label_text = f"{sep:.1f} ({sign}{diff:.1f})"
+                        sign_diff = "+" if diff >= 0 else ""
+                        label_text = f"{offset:.1f} ({sign_diff}{diff:.1f})"
                     ax4.text(x_indices[i], sep, label_text, ha='center', va='bottom', fontsize=8)
     
     plt.tight_layout()
-    fig.suptitle(f"Atmospheric Effect on Laser Beam ({gradient_type_sim})", fontsize=16, y=0.995)
-    plt.subplots_adjust(top=0.94)  # Adjust to make space for suptitle
+    fig.suptitle(f"Atmospheric Effect on Laser Beam ({gradient_type_sim})", fontsize=16, y=0.99)
+    plt.subplots_adjust(top=0.92)
     
     return fig
 
@@ -299,6 +289,7 @@ def run_simulation(
     dist_wall_sim=dist_wall_default,
     n_beams_sim=n_beams_default,
     d_angle_mrad_sim=d_angle_mrad_default,
+    offset_angle_mrad_sim=offset_angle_mrad_default,  # Add the offset parameter
     custom_initial_angles_rad_sim=None,
     w_laser_nm_sim=w_laser_nm_default,
     d_step_ds_sim=d_step_ds_default,
@@ -316,7 +307,7 @@ def run_simulation(
 
     print(f"\n--- Starting Simulation ---")
     print(f"Laser Start Height: {h_start_sim}m, Plot Max Height for Temp Profile: {h_plot_max_sim}m")
-    print(f"Wall Dist: {dist_wall_sim}m | Num Beams: {n_beams_sim} | Ang. Sep: {d_angle_mrad_sim}mrad | Lambda: {w_laser_nm_sim}nm")
+    print(f"Wall Dist: {dist_wall_sim}m | Num Beams: {n_beams_sim} | Ang. Sep: {d_angle_mrad_sim}mrad | Offset: {offset_angle_mrad_sim}mrad | Lambda: {w_laser_nm_sim}nm")
     print(f"Ground Temp: {temp_at_ground_C_sim}°C | Temp Grad: '{gradient_type_sim}'")
 
     L_for_pressure_sim = 0.0
@@ -332,15 +323,21 @@ def run_simulation(
         print(f"  Pressure calc using ISOTHERMAL model (L_lapse=0 K/m based on T_ground).")
 
     lambda_vac_m_sim = w_laser_nm_sim * 1e-9; d_angle_rad_sim = d_angle_mrad_sim * 1e-3
+    offset_angle_rad_sim = offset_angle_mrad_sim * 1e-3  # Convert offset angle to radians
+    
     if custom_initial_angles_rad_sim is not None:
         initial_angles_rad = np.asarray(custom_initial_angles_rad_sim)
         if n_beams_sim != len(initial_angles_rad) and len(initial_angles_rad) > 0 :
             n_beams_sim = len(initial_angles_rad)
         elif len(initial_angles_rad) == 0:
             initial_angles_rad = np.linspace(-(n_beams_sim -1)*d_angle_rad_sim/2., (n_beams_sim-1)*d_angle_rad_sim/2., max(1,n_beams_sim))
+            initial_angles_rad += offset_angle_rad_sim  # Add offset angle when generating default angles
     else:
-        if n_beams_sim <=0: n_beams_sim=1; initial_angles_rad=np.array([0.0])
-        else: initial_angles_rad = np.linspace(-(n_beams_sim-1)*d_angle_rad_sim/2.,(n_beams_sim-1)*d_angle_rad_sim/2., n_beams_sim)
+        if n_beams_sim <=0: n_beams_sim=1; initial_angles_rad=np.array([offset_angle_rad_sim])  # Apply offset to single beam
+        else: 
+            initial_angles_rad = np.linspace(-(n_beams_sim-1)*d_angle_rad_sim/2.,(n_beams_sim-1)*d_angle_rad_sim/2., n_beams_sim)
+            initial_angles_rad += offset_angle_rad_sim  # Add offset angle to generated angles
+    
     initial_angles_mrad = initial_angles_rad * 1000
     all_ray_paths = []; final_y_positions = []
 
@@ -423,6 +420,7 @@ if __name__ == '__main__':
         non_linear_decay_k_sim = 0.8,
         n_beams_sim=7,
         d_angle_mrad_sim=0.5,
+        offset_angle_mrad_sim=-1.0,  # Specify the offset angle
         dist_wall_sim=800,
         h_limit_min_sim=0.0,
         h_limit_max_sim=40.0,
