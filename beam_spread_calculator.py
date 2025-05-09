@@ -110,16 +110,16 @@ def create_combined_plot(
     """
     Creates a single figure with 4 subplots:
     1. Beam propagation paths
-    2. Temperature profile (swapped with Landing Height plot)
-    3. Landing height vs initial angle (swapped with Temperature plot)
+    2. Temperature profile 
+    3. Temperature profile (with max height = h_plot_max_sim)
     4. Beam landing separations
     """
     fig = plt.figure(figsize=(16, 12))
     
-    # Create a 2x2 grid of subplots - SWAP positions of subplots 2 and 3
+    # Create a 2x2 grid of subplots
     ax1 = plt.subplot(2, 2, 1)  # Top left: Ray Paths
-    ax3 = plt.subplot(2, 2, 2)  # Top right: Temperature Profile (was Landing Height)
-    ax2 = plt.subplot(2, 2, 3)  # Bottom left: Landing Height vs Initial Angle (was Temperature)
+    ax3 = plt.subplot(2, 2, 2)  # Top right: Temperature Profile
+    ax2 = plt.subplot(2, 2, 3)  # Bottom left: Temperature Profile with limited height
     ax4 = plt.subplot(2, 2, 4)  # Bottom right: Beam Landing Separations
     
     # Figure 1: Ray Paths
@@ -137,15 +137,22 @@ def create_combined_plot(
             if not((abs(y_fp-h_limit_max_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim) or \
                 (abs(y_fp-h_limit_min_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim)):
                 ax1.plot(dist_wall_sim, y_fp, 'ko', ms=5)
+                
     
     ax1.set_xlabel('Distance (m)')
     ax1.set_ylabel('Height (m)')
-    fig1_title = ['1: Laser Beam Propagation', f'Ground T: {temp_at_ground_C_sim}°C, Start H: {h_start_sim}m']
+    
+    # Create more compact title for subplot 1
+    fig1_title = ['1: Laser Beam Propagation']
+    second_line = f'Ground T: {temp_at_ground_C_sim}°C, Start H: {h_start_sim}m'
+    
     if gradient_type_sim == "linear_lapse":
-        fig1_title.append(f'Lapse: {custom_lapse_rate_K_per_m:.4f} K/m')
+        second_line += f', Lapse: {custom_lapse_rate_K_per_m:.4f} K/m'
     elif gradient_type_sim == "non_linear_ground_effect":
-        fig1_title.append(f'Non-linear: ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m')
-    ax1.set_title('\n'.join(fig1_title))
+        second_line += f', ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m'
+    
+    fig1_title.append(second_line)
+    ax1.set_title('\n'.join(fig1_title), fontsize=20)
     ax1.legend(fontsize='small', loc='best')
     ax1.grid(True, alpha=0.7)
     
@@ -160,7 +167,7 @@ def create_combined_plot(
         plot_max_y = h_limit_max_sim
     ax1.set_xlim(0, dist_wall_sim + dist_wall_sim * 0.05)
     
-    # Figure 3: Temperature Profile (NOW IN POSITION 2) - Remove Kelvin scale
+    # Prepare temperature profile data for both subplot 2 and 3
     heights = np.linspace(0, h_plot_max_sim, 100)
     temp_args = {
         "temp_at_ground_C": temp_at_ground_C_sim,
@@ -172,55 +179,44 @@ def create_combined_plot(
     temperatures_K = [temp_air_profile(h, **temp_args) for h in heights]
     temperatures_C = [T - 273.15 for T in temperatures_K]
     
-    # Plot with temperature on x-axis, height on y-axis
-    ax3.plot(temperatures_C, heights, 'b-', label='Temperature (°C)')
-    ax3.axhline(y=0, color='k', linestyle='-', alpha=0.3)
-    ax3.set_ylabel('Height (m)')
-    ax3.set_xlabel('Temperature (°C)')
+    # Common temperature profile plotting function with compact title
+    def plot_temp_profile(ax, title_number, max_height):
+        ax.plot(temperatures_C, heights, 'b-', label='Temperature (°C)')
+        ax.axhline(y=0, color='k', linestyle='-', alpha=0.3)
+        ax.set_ylabel('Height (m)')
+        ax.set_xlabel('Temperature (°C)')
+        
+        # Create more compact title for temperature profile plots
+        title_parts = [f'{title_number}: Temperature Profile']
+        second_line = f'Ground Temp: {temp_at_ground_C_sim}°C'
+        
+        if gradient_type_sim == "linear_lapse":
+            second_line += f', Lapse Rate: {custom_lapse_rate_K_per_m:.4f} K/m'
+        elif gradient_type_sim == "non_linear_ground_effect":
+            second_line += f', ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m'
+        
+        title_parts.append(second_line)
+        ax.set_title('\n'.join(title_parts), fontsize=20)
+        
+        temp_at_ground_C = temp_air_profile(0, **temp_args) - 273.15
+        temp_at_h_start_C = temp_air_profile(h_start_sim, **temp_args) - 273.15
+        ax.plot(temp_at_ground_C, 0, 'go', markersize=6, label=f'Ground Level: {temp_at_ground_C:.2f}°C')
+        if 0 <= h_start_sim <= max_height:
+            ax.plot(temp_at_h_start_C, h_start_sim, 'ro', markersize=6, 
+                    label=f'Instrument Height: {temp_at_h_start_C:.2f}°C')
+            ax.axhline(y=h_start_sim, color='r', linestyle=':', alpha=0.5)
+        
+        ax.legend(loc='best', fontsize='small')
+        ax.grid(True)
+        ax.set_ylim(0, max_height)
     
-    title_parts = ['3: Temperature Profile', f'Ground Temp: {temp_at_ground_C_sim}°C']
-    if gradient_type_sim == "linear_lapse":
-        title_parts.append(f'Lapse Rate: {custom_lapse_rate_K_per_m:.4f} K/m')
-    elif gradient_type_sim == "non_linear_ground_effect":
-        title_parts.append(f'Non-linear: ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m')
-    ax3.set_title('\n'.join(title_parts))
+    # Figure 2: Temperature Profile (Max height matches subplot 1)
+    plot_temp_profile(ax3, 2, plot_max_y)
     
-    # Mark ground and instrument height temperatures
-    temp_at_ground_C = temp_air_profile(0, **temp_args) - 273.15
-    temp_at_h_start_C = temp_air_profile(h_start_sim, **temp_args) - 273.15
-    ax3.plot(temp_at_ground_C, 0, 'go', markersize=6, label=f'Ground Level: {temp_at_ground_C:.2f}°C')
-    if 0 <= h_start_sim <= h_plot_max_sim:
-        ax3.plot(temp_at_h_start_C, h_start_sim, 'ro', markersize=6, 
-                 label=f'Instrument Height: {temp_at_h_start_C:.2f}°C')
-        ax3.axhline(y=h_start_sim, color='r', linestyle=':', alpha=0.5)
+    # Figure 3: Temperature Profile (Max height = h_plot_max_sim)  
+    plot_temp_profile(ax2, 3, h_plot_max_sim)
     
-    ax3.legend(loc='best', fontsize='small')
-    ax3.grid(True)
-    
-    # After plotting the temperature profile, set the y-axis limits to match subplot 1
-    ax3.set_ylim(0, plot_max_y)
-    
-    # Figure 2: Landing Height vs. Initial Angle (NOW IN POSITION 3)
-    valid_fy = []
-    valid_ia = []
-    for i, y_fp in enumerate(final_y_positions):
-        lx = all_ray_paths[i][0][-1] if all_ray_paths[i][0] else 0
-        is_early_max = (abs(y_fp-h_limit_max_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim)
-        is_early_min = (abs(y_fp-h_limit_min_sim)<1e-3 and lx<dist_wall_sim-d_step_ds_sim)
-        if lx >= dist_wall_sim - d_step_ds_sim and not is_early_max and not is_early_min:
-            valid_fy.append(y_fp)
-            valid_ia.append(initial_angles_mrad[i])
-    
-    if valid_fy:
-        ax2.plot(valid_ia, valid_fy, 'bo-', label="Impact on Wall")
-        ax2.set_xlabel("Initial Angle (mrad)")
-        ax2.set_ylabel(f"Final Height at Wall ({dist_wall_sim}m)")
-        ax2.set_title("2: Beam Landing Height vs. Initial Angle")
-        ax2.grid(True, alpha=0.7)
-        ax2.legend()
-        ax2.set_ylim(0, plot_max_y)  # Match the y-axis limit with subplot 1
-    
-    # Figure 4: Beam Landing Separations - Update bar labels to show offset from average
+    # Figure 4: Beam Landing Separations
     if final_y_positions and len(final_y_positions) >= 2:
         separations = []
         pair_labels = []
