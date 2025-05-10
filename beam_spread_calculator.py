@@ -158,6 +158,11 @@ def create_combined_plot(
     ax1.set_xlabel('Distance (m)')
     ax1.set_ylabel('Height (m)')
     
+    # Add minor grid lines on y axis with 0.1m spacing
+    ax1.yaxis.set_minor_locator(plt.MultipleLocator(0.1))
+    ax1.grid(True, which='major', alpha=0.7)
+    ax1.grid(True, which='minor', axis='y', alpha=0.3, color='lightgray', linestyle=':')
+    
     # Create more compact title for subplot 1
     fig1_title = ['1: Laser Beam Propagation']
     second_line = f'Ground T: {temp_at_ground_C_sim}°C, Start H: {h_start_sim}m'
@@ -433,7 +438,7 @@ if __name__ == '__main__':
         n_beams_sim=7,
         d_angle_mrad_sim=0.5,
         offset_angle_mrad_sim=-1.0,  # Specify the offset angle
-        dist_wall_sim=800,
+        dist_wall_sim=500,
         h_limit_min_sim=0.0,
         h_limit_max_sim=40.0,
         h_plot_max_sim=10.0
