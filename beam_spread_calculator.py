@@ -211,6 +211,16 @@ def create_combined_plot(
         ax.set_ylabel('Height (m)')
         ax.set_xlabel('Temperature (°C)')
         
+        # Set x-ticks with 1°C separation
+        min_temp = min(temperatures_C)
+        max_temp = max(temperatures_C)
+        # Round down to nearest integer for min and up for max
+        x_min = np.floor(min_temp)
+        x_max = np.ceil(max_temp)
+        # Create ticks with 1°C separation
+        x_ticks = np.arange(x_min, x_max + 1, 1)
+        ax.set_xticks(x_ticks)
+        
         # Create more compact title for temperature profile plots
         title_parts = [f'{title_number}: Temperature Profile']
         second_line = f'Ground Temp: {temp_at_ground_C_sim}°C'
@@ -392,10 +402,25 @@ def run_simulation(
 
 if __name__ == '__main__':
     print("\n### Running Simulation with Non-Linear Ground Effect Temperature Profile ###")
+    # run_simulation(
+    #     h_start_sim=1.5,
+    #     temp_at_ground_C_sim=25.0,
+    #     gradient_type_sim="non_linear_ground_effect",
+    #     non_linear_delta_T_C_sim = -5.0,
+    #     non_linear_decay_k_sim = 0.8,
+    #     n_beams_sim=7,
+    #     d_angle_mrad_sim=0.5,
+    #     offset_angle_mrad_sim=-1.0,  # Specify the offset angle
+    #     dist_wall_sim=500,
+    #     h_limit_min_sim=0.0,
+    #     h_limit_max_sim=40.0,
+    #     h_plot_max_sim=10.0
+    # )
+
     run_simulation(
         h_start_sim=1.5,
         temp_at_ground_C_sim=25.0,
-        gradient_type_sim="non_linear_ground_effect",
+        gradient_type_sim="linear_lapse",
         non_linear_delta_T_C_sim = -5.0,
         non_linear_decay_k_sim = 0.8,
         n_beams_sim=7,
@@ -404,5 +429,6 @@ if __name__ == '__main__':
         dist_wall_sim=500,
         h_limit_min_sim=0.0,
         h_limit_max_sim=40.0,
-        h_plot_max_sim=10.0
+        h_plot_max_sim=10.0,
+        custom_lapse_rate_K_per_m=1
     )
