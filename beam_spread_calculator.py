@@ -401,26 +401,12 @@ def run_simulation(
     return all_ray_paths, final_y_positions, initial_angles_mrad
 
 if __name__ == '__main__':
-    print("\n### Running Simulation with Non-Linear Ground Effect Temperature Profile ###")
-    # run_simulation(
-    #     h_start_sim=1.5,
-    #     temp_at_ground_C_sim=25.0,
-    #     gradient_type_sim="non_linear_ground_effect",
-    #     non_linear_delta_T_C_sim = -5.0,
-    #     non_linear_decay_k_sim = 0.8,
-    #     n_beams_sim=7,
-    #     d_angle_mrad_sim=0.5,
-    #     offset_angle_mrad_sim=-1.0,  # Specify the offset angle
-    #     dist_wall_sim=500,
-    #     h_limit_min_sim=0.0,
-    #     h_limit_max_sim=40.0,
-    #     h_plot_max_sim=10.0
-    # )
 
+    print("\n### Running Simulation with Non-Linear Ground Effect Temperature Profile ###")
     run_simulation(
         h_start_sim=1.5,
         temp_at_ground_C_sim=25.0,
-        gradient_type_sim="linear_lapse",
+        gradient_type_sim="non_linear_ground_effect",
         non_linear_delta_T_C_sim = -5.0,
         non_linear_decay_k_sim = 0.8,
         n_beams_sim=7,
@@ -429,6 +415,22 @@ if __name__ == '__main__':
         dist_wall_sim=500,
         h_limit_min_sim=0.0,
         h_limit_max_sim=40.0,
-        h_plot_max_sim=10.0,
-        custom_lapse_rate_K_per_m=1
+        h_plot_max_sim=10.0
     )
+
+    # Linear temp change
+    # run_simulation(
+    #     h_start_sim=1.5,
+    #     temp_at_ground_C_sim=25.0,
+    #     gradient_type_sim="linear_lapse",
+    #     non_linear_delta_T_C_sim = -5.0,
+    #     non_linear_decay_k_sim = 0.8,
+    #     n_beams_sim=7,
+    #     d_angle_mrad_sim=0.5,
+    #     offset_angle_mrad_sim=-1.0,  # Specify the offset angle
+    #     dist_wall_sim=500,
+    #     h_limit_min_sim=0.0,
+    #     h_limit_max_sim=40.0,
+    #     h_plot_max_sim=10.0,
+    #     custom_lapse_rate_K_per_m=-1
+    # )
