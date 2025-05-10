@@ -243,23 +243,23 @@ def create_combined_plot(
     
     # Figure 4: Beam Landing Height Differences (previously Figure 5)
     if final_y_positions and no_gradient_landing_heights and len(final_y_positions) == len(no_gradient_landing_heights):
-        # Calculate height differences (with gradient - without gradient)
-        height_differences = [y_with - y_without for y_with, y_without in zip(final_y_positions, no_gradient_landing_heights)]
+        # Calculate height differences (with gradient - without gradient) in mm
+        height_differences_mm = [(y_with - y_without) * 1000 for y_with, y_without in zip(final_y_positions, no_gradient_landing_heights)]
         
         # Plot differences vs. straight-line landing heights
-        ax4.plot(no_gradient_landing_heights, height_differences, 'o-', color='darkblue', linewidth=1.5, markersize=6)
+        ax4.plot(no_gradient_landing_heights, height_differences_mm, 'o-', color='darkblue', linewidth=1.5, markersize=6)
         
         # Add horizontal line at y=0 (no difference)
         ax4.axhline(y=0, color='gray', linestyle='-', alpha=0.5, linewidth=1)
         
         # Label each point with beam number
-        for i, (x, y) in enumerate(zip(no_gradient_landing_heights, height_differences)):
+        for i, (x, y) in enumerate(zip(no_gradient_landing_heights, height_differences_mm)):
             ax4.annotate(f"B{i+1}", (x, y), fontsize=9, 
                         xytext=(5, 5), textcoords='offset points',
                         bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="gray", alpha=0.7))
         
         ax4.set_xlabel('Theoretical Landing Height without Temperature Gradient (m)')
-        ax4.set_ylabel('Height Difference: With Gradient - Without Gradient (m)')
+        ax4.set_ylabel('Height Difference: With Gradient - Without Gradient (mm)')
         ax4.set_title('4: Beam Bending Effect due to Temperature Gradient', fontsize=20)
         
         # Add minor grid
