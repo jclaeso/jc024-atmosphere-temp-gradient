@@ -100,7 +100,7 @@ def calculate_dn_dh(h, temp_at_ground_C, p0_Pa, lambda_vac_m,
         n_h_plus = get_n_at_h(h + delta_h_numerical); n_h_minus = get_n_at_h(h - delta_h_numerical)
         return (n_h_plus - n_h_minus) / (2 * delta_h_numerical)
 
-# Add a new function to create a combined plot with 4 subplots
+# Add a new function to create a combined plot with 5 subplots
 def create_combined_plot(
     all_ray_paths, final_y_positions, initial_angles_mrad,
     dist_wall_sim, d_step_ds_sim, h_limit_max_sim, h_limit_min_sim, h_start_sim,
@@ -108,21 +108,26 @@ def create_combined_plot(
     non_linear_delta_T_C_sim, non_linear_decay_k_sim, h_plot_max_sim
 ):
     """
-    Creates a single figure with 4 subplots:
+    Creates a single figure with 5 subplots:
     1. Beam propagation paths
     2. Temperature profile 
     3. Temperature profile (with max height = h_plot_max_sim)
     4. Beam landing separations
+    5. Beam landing height differences (with vs. without temp gradient)
     """
-    fig = plt.figure(figsize=(16, 12))
+    fig = plt.figure(figsize=(16, 15))  # Make figure taller to accommodate 5th subplot
     
-    # Create a 2x2 grid of subplots
-    ax1 = plt.subplot(2, 2, 1)  # Top left: Ray Paths
-    ax3 = plt.subplot(2, 2, 2)  # Top right: Temperature Profile
-    ax2 = plt.subplot(2, 2, 3)  # Bottom left: Temperature Profile with limited height
-    ax4 = plt.subplot(2, 2, 4)  # Bottom right: Beam Landing Separations
+    # Create a 3x2 grid of subplots (5 used, 1 empty)
+    ax1 = plt.subplot(3, 2, 1)  # Top left: Ray Paths
+    ax3 = plt.subplot(3, 2, 2)  # Top right: Temperature Profile
+    ax2 = plt.subplot(3, 2, 3)  # Middle left: Temperature Profile with limited height
+    ax4 = plt.subplot(3, 2, 4)  # Middle right: Beam Landing Separations
+    ax5 = plt.subplot(3, 2, (5, 6))  # Bottom row: Landing height differences
     
     # Figure 1: Ray Paths
+    # Store straight-line landing heights for use in subplot 5
+    no_gradient_landing_heights = []
+    
     for i, (px, py) in enumerate(all_ray_paths):
         line = ax1.plot(px, py, label=f'Beam {i+1}')
         # Add straight-line reference trajectory
@@ -134,6 +139,7 @@ def create_combined_plot(
             # Calculate straight line trajectory
             angle_rad = initial_angles_mrad[i] * 1e-3  # Convert from mrad to rad
             y_at_wall = h_start_sim + np.tan(angle_rad) * dist_wall_sim
+            no_gradient_landing_heights.append(y_at_wall)
             # Plot the straight reference line
             ax1.plot([0, dist_wall_sim], [h_start_sim, y_at_wall], 
                     color=beam_color, linestyle='--', 
@@ -294,6 +300,32 @@ def create_combined_plot(
                         sign_diff = "+" if diff >= 0 else ""
                         label_text = f"{offset:.1f} ({sign_diff}{diff:.1f})"
                     ax4.text(x_indices[i], sep, label_text, ha='center', va='bottom', fontsize=8)
+    
+    # Figure 5: Beam Landing Height Differences
+    if final_y_positions and no_gradient_landing_heights and len(final_y_positions) == len(no_gradient_landing_heights):
+        # Calculate height differences (with gradient - without gradient)
+        height_differences = [y_with - y_without for y_with, y_without in zip(final_y_positions, no_gradient_landing_heights)]
+        
+        # Plot differences vs. straight-line landing heights
+        ax5.plot(no_gradient_landing_heights, height_differences, 'o-', color='darkblue', linewidth=1.5, markersize=6)
+        
+        # Add horizontal line at y=0 (no difference)
+        ax5.axhline(y=0, color='gray', linestyle='-', alpha=0.5, linewidth=1)
+        
+        # Label each point with beam number
+        for i, (x, y) in enumerate(zip(no_gradient_landing_heights, height_differences)):
+            ax5.annotate(f"B{i+1}", (x, y), fontsize=9, 
+                        xytext=(5, 5), textcoords='offset points',
+                        bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="gray", alpha=0.7))
+        
+        ax5.set_xlabel('Theoretical Landing Height without Temperature Gradient (m)')
+        ax5.set_ylabel('Height Difference: With Gradient - Without Gradient (m)')
+        ax5.set_title('5: Beam Bending Effect due to Temperature Gradient', fontsize=20)
+        
+        # Add minor grid
+        ax5.grid(True, which='major', alpha=0.7)
+        ax5.grid(True, which='minor', alpha=0.3, linestyle=':')
+        ax5.minorticks_on()
     
     plt.tight_layout()
     fig.suptitle(f"Atmospheric Effect on Laser Beam ({gradient_type_sim})", fontsize=16, y=0.99)
