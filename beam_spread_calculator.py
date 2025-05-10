@@ -177,7 +177,7 @@ def create_combined_plot(
         second_line += f', ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m'
     
     fig1_title.append(second_line)
-    ax1.set_title('\n'.join(fig1_title), fontsize=20)
+    ax1.set_title('\n'.join(fig1_title), fontsize=16)
     ax1.legend(fontsize='small', loc='best')
     ax1.grid(True, alpha=0.7)
     
@@ -221,7 +221,7 @@ def create_combined_plot(
             second_line += f', ΔT={non_linear_delta_T_C_sim}°C, k={non_linear_decay_k_sim}/m'
         
         title_parts.append(second_line)
-        ax.set_title('\n'.join(title_parts), fontsize=20)
+        ax.set_title('\n'.join(title_parts), fontsize=16)
         
         temp_at_ground_C = temp_air_profile(0, **temp_args) - 273.15
         temp_at_h_start_C = temp_air_profile(h_start_sim, **temp_args) - 273.15
@@ -260,15 +260,16 @@ def create_combined_plot(
         
         ax4.set_xlabel('Theoretical Landing Height without Temperature Gradient (m)')
         ax4.set_ylabel('Height Difference: With Gradient - Without Gradient (mm)')
-        ax4.set_title('4: Beam Bending Effect due to Temperature Gradient', fontsize=20)
+        ax4.set_title('4: Beam Bending Effect due to Temperature Gradient', fontsize=16)
         
-        # Add minor grid
         ax4.grid(True, which='major', alpha=0.7)
         ax4.grid(True, which='minor', alpha=0.3, linestyle=':')
         ax4.minorticks_on()
     
     plt.tight_layout()
-    fig.suptitle(f"Atmospheric Effect on Laser Beam ({gradient_type_sim})", fontsize=16, y=0.99)
+    # Keep title at the same high position but create more room below it
+    fig.suptitle(f"Atmospheric Effect on Laser Beam ({gradient_type_sim})", fontsize=16, y=0.998, weight='bold')
+    # Decrease the top value to move subplots down and create more space for the title
     plt.subplots_adjust(top=0.92)
     
     return fig
@@ -345,15 +346,12 @@ def run_simulation(
             limit_val = h_limit_max_sim if y > h_limit_max_sim else h_limit_min_sim
             all_ray_paths.append(([x],[limit_val])); final_y_positions.append(limit_val)
             continue
-
         current_path_x = [x]; current_path_y = [y]
         total_s_propagated = 0.0; terminated_early = False
-
         while x < dist_wall_sim:
             T_curr_K = temp_air_profile(y, **temp_profile_args_for_sim)
             T_ground_K_for_pressure = temp_at_ground_C_sim + 273.15
             P_curr_Pa = pressure_at_height(y, T_ground_K_for_pressure, p0_Pa_sim, L_for_pressure_sim)
-
             if T_curr_K <= 0 or P_curr_Pa <= 0: terminated_early = True; break
             n_curr = refractive_index_air(T_curr_K, P_curr_Pa, lambda_vac_m_sim)
             grad_n_y = calculate_dn_dh(y, temp_at_ground_C_sim, p0_Pa_sim, lambda_vac_m_sim,
@@ -364,11 +362,9 @@ def run_simulation(
             x += cos_phi * d_step_ds_sim; y += sin_phi * d_step_ds_sim
             phi += dphi_ds * d_step_ds_sim; total_s_propagated += d_step_ds_sim
             current_path_x.append(x); current_path_y.append(y)
-
             if y > h_limit_max_sim: current_path_y[-1] = h_limit_max_sim; terminated_early = True; break
             if y < h_limit_min_sim: current_path_y[-1] = h_limit_min_sim; terminated_early = True; break
             if total_s_propagated > 2 * (dist_wall_sim + h_limit_max_sim + abs(h_limit_min_sim)): terminated_early = True; break
-        
         all_ray_paths.append((current_path_x, current_path_y))
         final_y_at_termination = current_path_y[-1]
         if not terminated_early and x >= dist_wall_sim and len(current_path_x) > 1:
@@ -377,16 +373,13 @@ def run_simulation(
                 final_y_at_termination = max(h_limit_min_sim, min(h_limit_max_sim, final_y_at_termination))
             except Exception: pass
         final_y_positions.append(final_y_at_termination)
-
     create_combined_plot(
         all_ray_paths, final_y_positions, initial_angles_mrad,
         dist_wall_sim, d_step_ds_sim, h_limit_max_sim, h_limit_min_sim, h_start_sim,
         temp_at_ground_C_sim, gradient_type_sim, custom_lapse_rate_K_per_m,
         non_linear_delta_T_C_sim, non_linear_decay_k_sim, h_plot_max_sim
     )
-
     plt.show()
-
     print("\n--- Final Y positions (at termination: wall, ground, or max height) ---")
     for i,y_pos in enumerate(final_y_positions):
         status = "";lx = all_ray_paths[i][0][-1] if all_ray_paths[i] and all_ray_paths[i][0] else -1
@@ -395,9 +388,7 @@ def run_simulation(
         elif lx>=dist_wall_sim-d_step_ds_sim:status=f"(Wall x~{dist_wall_sim}m)"
         else:status=f"(Early x={lx:.2f}m)"
         print(f"B{i+1}(Ang:{initial_angles_mrad[i]:.3f}mrad):Y={y_pos:.4f}m {status}")
-
     return all_ray_paths, final_y_positions, initial_angles_mrad
-
 
 if __name__ == '__main__':
     print("\n### Running Simulation with Non-Linear Ground Effect Temperature Profile ###")
