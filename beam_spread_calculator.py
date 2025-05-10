@@ -100,7 +100,7 @@ def calculate_dn_dh(h, temp_at_ground_C, p0_Pa, lambda_vac_m,
         n_h_plus = get_n_at_h(h + delta_h_numerical); n_h_minus = get_n_at_h(h - delta_h_numerical)
         return (n_h_plus - n_h_minus) / (2 * delta_h_numerical)
 
-# Add a new function to create a combined plot with 5 subplots
+# Add a new function to create a combined plot with 4 subplots
 def create_combined_plot(
     all_ray_paths, final_y_positions, initial_angles_mrad,
     dist_wall_sim, d_step_ds_sim, h_limit_max_sim, h_limit_min_sim, h_start_sim,
@@ -108,24 +108,22 @@ def create_combined_plot(
     non_linear_delta_T_C_sim, non_linear_decay_k_sim, h_plot_max_sim
 ):
     """
-    Creates a single figure with 5 subplots:
+    Creates a single figure with 4 subplots:
     1. Beam propagation paths
     2. Temperature profile 
     3. Temperature profile (with max height = h_plot_max_sim)
-    4. Beam landing separations
-    5. Beam landing height differences (with vs. without temp gradient)
+    4. Beam landing height differences (with vs. without temp gradient)
     """
-    fig = plt.figure(figsize=(16, 15))  # Make figure taller to accommodate 5th subplot
+    fig = plt.figure(figsize=(16, 12))  # Adjust height back to original
     
-    # Create a 3x2 grid of subplots (5 used, 1 empty)
-    ax1 = plt.subplot(3, 2, 1)  # Top left: Ray Paths
-    ax3 = plt.subplot(3, 2, 2)  # Top right: Temperature Profile
-    ax2 = plt.subplot(3, 2, 3)  # Middle left: Temperature Profile with limited height
-    ax4 = plt.subplot(3, 2, 4)  # Middle right: Beam Landing Separations
-    ax5 = plt.subplot(3, 2, (5, 6))  # Bottom row: Landing height differences
+    # Create a 2x2 grid of subplots
+    ax1 = plt.subplot(2, 2, 1)  # Top left: Ray Paths
+    ax3 = plt.subplot(2, 2, 2)  # Top right: Temperature Profile
+    ax2 = plt.subplot(2, 2, 3)  # Bottom left: Temperature Profile with limited height
+    ax4 = plt.subplot(2, 2, 4)  # Bottom right: Landing height differences (previously ax5)
     
     # Figure 1: Ray Paths
-    # Store straight-line landing heights for use in subplot 5
+    # Store straight-line landing heights for use in subplot 4
     no_gradient_landing_heights = []
     
     for i, (px, py) in enumerate(all_ray_paths):
@@ -243,89 +241,31 @@ def create_combined_plot(
     # Figure 3: Temperature Profile (Max height = h_plot_max_sim)  
     plot_temp_profile(ax2, 3, h_plot_max_sim)
     
-    # Figure 4: Beam Landing Separations
-    if final_y_positions and len(final_y_positions) >= 2:
-        separations = []
-        pair_labels = []
-        for i in range(len(final_y_positions) - 1):
-            sep = (final_y_positions[i+1] - final_y_positions[i]) * 1000  # Convert to mm
-            separations.append(sep)
-            label = f"B{i+1}-B{i+2}"
-            pair_labels.append(label)
-        
-        if separations:
-            sep_diffs = [0]  # First bar has no previous bar to compare with
-            for i in range(1, len(separations)):
-                diff = separations[i] - separations[i-1]
-                sep_diffs.append(diff)
-            
-            avg_separation = np.mean(separations)
-            offsets_from_avg = [sep - avg_separation for sep in separations]
-            
-            x_indices = np.arange(len(separations))
-            ax4.bar(x_indices, separations, color='coral', label='Separation (mm)')
-            ax4.axhline(avg_separation, color='dodgerblue', linestyle='--', linewidth=2, 
-                       label=f'Avg: {avg_separation:.4f} mm')
-            ax4.set_xlabel('Adjacent Beam Pair')
-            ax4.set_ylabel('Landing Height Separation (mm)')
-            ax4.set_title('4: Beam Landing Height Separation')
-            
-            if pair_labels:
-                ax4.set_xticks(x_indices)
-                ax4.set_xticklabels(pair_labels, rotation=45, ha="right", fontsize=9)
-            
-            ax4.legend(loc='best', fontsize='small')
-            
-            if separations:
-                max_sep = max(separations)
-                min_sep = min(separations)
-                
-                y_min = np.floor(min_sep - 0.5)
-                y_max = np.ceil(max_sep + 0.5)
-                ax4.set_ylim(y_min, y_max)
-                
-                major_ticks = np.arange(np.floor(y_min), np.ceil(y_max) + 1, 1)
-                ax4.set_yticks(major_ticks)
-                
-                minor_ticks = np.arange(np.floor(y_min), np.ceil(y_max) + 0.2, 0.2)
-                ax4.set_yticks(minor_ticks, minor=True)
-                
-                ax4.grid(True, which='major', axis='y', linestyle='-', linewidth=0.8, alpha=0.7)
-                ax4.grid(True, which='minor', axis='y', linestyle=':', linewidth=0.4, alpha=0.4)
-                
-                for i, (sep, diff, offset) in enumerate(zip(separations, sep_diffs, offsets_from_avg)):
-                    if i == 0:
-                        label_text = f"{offset:.1f}"
-                    else:
-                        sign_diff = "+" if diff >= 0 else ""
-                        label_text = f"{offset:.1f} ({sign_diff}{diff:.1f})"
-                    ax4.text(x_indices[i], sep, label_text, ha='center', va='bottom', fontsize=8)
-    
-    # Figure 5: Beam Landing Height Differences
+    # Figure 4: Beam Landing Height Differences (previously Figure 5)
     if final_y_positions and no_gradient_landing_heights and len(final_y_positions) == len(no_gradient_landing_heights):
         # Calculate height differences (with gradient - without gradient)
         height_differences = [y_with - y_without for y_with, y_without in zip(final_y_positions, no_gradient_landing_heights)]
         
         # Plot differences vs. straight-line landing heights
-        ax5.plot(no_gradient_landing_heights, height_differences, 'o-', color='darkblue', linewidth=1.5, markersize=6)
+        ax4.plot(no_gradient_landing_heights, height_differences, 'o-', color='darkblue', linewidth=1.5, markersize=6)
         
         # Add horizontal line at y=0 (no difference)
-        ax5.axhline(y=0, color='gray', linestyle='-', alpha=0.5, linewidth=1)
+        ax4.axhline(y=0, color='gray', linestyle='-', alpha=0.5, linewidth=1)
         
         # Label each point with beam number
         for i, (x, y) in enumerate(zip(no_gradient_landing_heights, height_differences)):
-            ax5.annotate(f"B{i+1}", (x, y), fontsize=9, 
+            ax4.annotate(f"B{i+1}", (x, y), fontsize=9, 
                         xytext=(5, 5), textcoords='offset points',
                         bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="gray", alpha=0.7))
         
-        ax5.set_xlabel('Theoretical Landing Height without Temperature Gradient (m)')
-        ax5.set_ylabel('Height Difference: With Gradient - Without Gradient (m)')
-        ax5.set_title('5: Beam Bending Effect due to Temperature Gradient', fontsize=20)
+        ax4.set_xlabel('Theoretical Landing Height without Temperature Gradient (m)')
+        ax4.set_ylabel('Height Difference: With Gradient - Without Gradient (m)')
+        ax4.set_title('4: Beam Bending Effect due to Temperature Gradient', fontsize=20)
         
         # Add minor grid
-        ax5.grid(True, which='major', alpha=0.7)
-        ax5.grid(True, which='minor', alpha=0.3, linestyle=':')
-        ax5.minorticks_on()
+        ax4.grid(True, which='major', alpha=0.7)
+        ax4.grid(True, which='minor', alpha=0.3, linestyle=':')
+        ax4.minorticks_on()
     
     plt.tight_layout()
     fig.suptitle(f"Atmospheric Effect on Laser Beam ({gradient_type_sim})", fontsize=16, y=0.99)
