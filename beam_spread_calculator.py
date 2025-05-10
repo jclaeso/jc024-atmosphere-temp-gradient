@@ -306,7 +306,7 @@ def run_simulation(
     print(f"Wall Dist: {dist_wall_sim}m | Num Beams: {n_beams_sim} | Ang. Sep: {d_angle_mrad_sim}mrad | Offset: {offset_angle_mrad_sim}mrad | Lambda: {w_laser_nm_sim}nm")
     print(f"Ground Temp: {temp_at_ground_C_sim}°C | Temp Grad: '{gradient_type_sim}'")
 
-    L_for_pressure_sim = 0.0
+    L_for_pressure_sim = 0.0 
     if gradient_type_sim == "linear_lapse":
         L_for_pressure_sim = custom_lapse_rate_K_per_m
         print(f"  Linear Lapse Rate: {custom_lapse_rate_K_per_m} K/m")
