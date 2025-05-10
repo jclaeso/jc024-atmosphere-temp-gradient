@@ -124,7 +124,23 @@ def create_combined_plot(
     
     # Figure 1: Ray Paths
     for i, (px, py) in enumerate(all_ray_paths):
-        ax1.plot(px, py, label=f'Beam {i+1}')
+        line = ax1.plot(px, py, label=f'Beam {i+1}')
+        # Add straight-line reference trajectory
+        if px and py:  # Make sure the beam has valid path data
+            # Get the color of the current beam line
+            beam_color = line[0].get_color()
+            # Get the linewidth of the current beam line
+            beam_linewidth = plt.rcParams['lines.linewidth'] if line[0].get_linewidth() == 1.0 else line[0].get_linewidth()
+            # Calculate straight line trajectory
+            angle_rad = initial_angles_mrad[i] * 1e-3  # Convert from mrad to rad
+            y_at_wall = h_start_sim + np.tan(angle_rad) * dist_wall_sim
+            # Plot the straight reference line
+            ax1.plot([0, dist_wall_sim], [h_start_sim, y_at_wall], 
+                    color=beam_color, linestyle='--', 
+                    linewidth=beam_linewidth*0.5,  # 50% thinner
+                    alpha=0.5,  # 50% opacity
+                    zorder=1)  # Place behind the actual beam paths
+    
     ax1.axvline(x=dist_wall_sim, c='k', ls='--', label=f'Wall {dist_wall_sim}m')
     ax1.axhline(y=h_limit_max_sim, c='r', ls=':', label=f'Max H {h_limit_max_sim}m')
     ax1.axhline(y=h_limit_min_sim, c='g', ls=':', label=f'Ground {h_limit_min_sim}m')
@@ -422,4 +438,3 @@ if __name__ == '__main__':
         h_limit_max_sim=40.0,
         h_plot_max_sim=10.0
     )
-     
