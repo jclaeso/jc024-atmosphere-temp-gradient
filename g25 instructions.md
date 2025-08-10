@@ -40,3 +40,6 @@ in subplot1:
 add dashed thin lines that shows the beam trajectories for a case with no air or air of constant temperature. The beams should propagate in a stright line from the emission point to the wall. The lines should be in a the same color as the beams, but with a lower opacity and dashed and 50% thinner. 
 
 
+###
+
+
